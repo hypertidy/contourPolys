@@ -45,7 +45,22 @@ options(warn = -1)
 for (row in seq_len(nrow(mask)-1)) {
   codes[[row]] <- apply(matrix(extract(mask, c(twobytwo(r, row))), nrow = 4), 2, pak)
 }
+ 
+
+lookup_table <- function(code, coord, res) {
+  ## build the segment on the coord with the given resolution
+  ## case 1
+  xy1 <- c(res[1]/2, 0)
+  xy2 <- c(0, -res[2]/2)
   
+  ## case2
+  xy1 <- c(0, -res[2]/2)
+  xy2 <- c(0, res[1]/2)
+  
+  ## etc, figure out cunning lookup
+  coords <- rbind(coord, coord)
+  
+} 
 
 ```
 
