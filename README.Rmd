@@ -19,6 +19,36 @@ knitr::opts_chunk$set(
 The goal of contourPolys is to create polygons via contourLines. 
 
 
+But, maybe we can marching squares - here's a rough stab at the codes for the cases: 
+
+```{r marching}
+library(raster)
+
+r <- raster(volcano)
+
+v <- 120
+#contour(r, level = v)
+
+mask <- r >= v
+plot(mask)
+twobytwo <- function(x, row = 1) {
+ ind <-  matrix(c(1, 2) + c(0, 0, rep(ncol(r), 2)), nrow = 4, ncol = ncol(r) - 1) + 
+    cellFromRow(r, 1) - 1
+ ind + ncol(r) * (row-1)
+}
+plot(mask)
+codes <- vector("list", nrow(r)-1)
+pak <- function(x) {
+  as.integer(packBits(as.integer(c(x, 0, 0, 0, 0)), type = "raw"))
+}
+options(warn = -1)
+for (row in seq_len(nrow(mask)-1)) {
+  codes[[row]] <- apply(matrix(extract(mask, c(twobytwo(r, row))), nrow = 4), 2, pak)
+}
+  
+
+```
+
 ## Installation
 
 You can install contourPolys from github with:
