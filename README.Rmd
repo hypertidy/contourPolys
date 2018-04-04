@@ -39,17 +39,35 @@ sf_explode <- function(x) {
                                function(idx) sf::st_linestring(as.matrix(.x[idx, c("X", "Y")])))) 
   sf::st_sfc(unlist(ll, recursive = FALSE))
 }
-
+#' Contour polygons
+#'
+#' @param x Raster
+#' @param ... arguments passed to `contourLines`
+#'
+#' @return sf polygons
+#' @export
+#'
+#' @examples
+contour_poly <- function(x, levels = NULL, ..., nlevels = 10) {
+  minmax <- c(raster::cellStats(x, min), raster::cellStats(x, max))
+  if (is.null(levels)) levels <- seq(minmax[1] - 1, minmax[2], length = nlevels)
+  ex <- raster::extend(x, 1L, value = minmax[1] - 1)
+  cl <- rasterToContour(x, ...)
+}
 
 r <- extend(raster(volcano), 1, value = min(volcano)- 1)
 cl <- rasterToContour(r, levels = seq(min(volcano) - 0.5, max(volcano) - 10, by = 20))
 x <- sf_explode(sf::st_as_sf(cl))
+
 
 library(sf)
 p <- st_polygonize(st_union(x))
 a <- st_cast(p)
 st_overlaps(a)
 plot(a, col = viridis::viridis(length(a)))
+
+
+library(anglr)
 
 
 ```
