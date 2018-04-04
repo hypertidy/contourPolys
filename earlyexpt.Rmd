@@ -1,71 +1,18 @@
+---
+title: "Untitled"
+output: html_document
+---
 
-<!-- README.md is generated from README.Rmd. Please edit that file -->
-contourPolys
-============
-
-The goal of contourPolys is to create polygons via contourLines.
-
-Example
--------
-
-This seems to work
-
-``` r
-library(raster)
-#> Loading required package: sp
-library(dplyr)
-#> 
-#> Attaching package: 'dplyr'
-#> The following objects are masked from 'package:raster':
-#> 
-#>     intersect, select, union
-#> The following objects are masked from 'package:stats':
-#> 
-#>     filter, lag
-#> The following objects are masked from 'package:base':
-#> 
-#>     intersect, setdiff, setequal, union
-p2seg <- function(x) cbind(head(seq_len(nrow(x)), -1), 
-                           tail(seq_len(nrow(x)), -1))
-sf_explode <- function(x) {
-  d <- sf::st_coordinates(x) %>% 
-    tibble::as_tibble()
-  Ls <- grep("^L", names(d))
-  paster <- function(...) paste(..., sep = "-")
-  dl <- d[-Ls] %>% mutate(path = do.call(paster, d[Ls])) %>% 
-    split(.$path) 
-  ll <- purrr::map(dl, ~lapply(split(t(p2seg(.x)), rep(seq_len(nrow(.x)-1), each = 2L)), 
-                               function(idx) sf::st_linestring(as.matrix(.x[idx, c("X", "Y")])))) 
-  sf::st_sfc(unlist(ll, recursive = FALSE))
-}
-
-
-r <- extend(raster(volcano), 1, value = min(volcano)- 1)
-cl <- rasterToContour(r, levels = seq(min(volcano) - 0.5, max(volcano) - 10, by = 20))
-x <- sf_explode(sf::st_as_sf(cl))
-
-library(sf)
-#> Linking to GEOS 3.6.2, GDAL 2.2.4, proj.4 4.9.3
-p <- st_polygonize(st_union(x))
-a <- st_cast(p)
-st_overlaps(a)
-#> Sparse geometry binary predicate list of length 6, where the predicate was `overlaps'
-#>  1: (empty)
-#>  2: (empty)
-#>  3: (empty)
-#>  4: (empty)
-#>  5: (empty)
-#>  6: (empty)
-plot(a, col = viridis::viridis(length(a)))
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
 ```
-
-![](README-unnamed-chunk-2-1.png)
 
 Meh ...
 
-But, maybe we can marching squares - here's a rough stab at the codes for the cases:
 
-``` r
+But, maybe we can marching squares - here's a rough stab at the codes for the cases: 
+
+```{r marching, eval = FALSE}
 library(raster)
 
 r <- raster(volcano)
@@ -105,21 +52,22 @@ lookup_table <- function(code, coord, res) {
   coords <- rbind(coord, coord)
   
 } 
+
 ```
 
-Installation
-------------
+## Installation
 
 You can install contourPolys from github with:
 
-``` r
+```{r gh-installation, eval = FALSE}
 # install.packages("devtools")
 devtools::install_github("hypertidy/contourPolys")
 ```
 
+
 This is a basic example which shows you how to solve a common problem:
 
-``` r
+```{r example, eval = FALSE}
 
 library(raster)
 r <- aggregate(raster(volcano), fact = 2, fun = median) %/% 20
