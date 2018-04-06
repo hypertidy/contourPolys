@@ -22,7 +22,7 @@ By hacking `filled.contour` we can get all the fragments out, reproject their co
 library(raadtools)
 #> Loading required package: raster
 #> Loading required package: sp
-d <- aggregate(readtopo("etopo2", xylim = extent(120, 150, -45, -30))[[1]], fact = 4)
+d <- readtopo("etopo2", xylim = extent(120, 150, -45, -30))[[1]]
 x <- yFromRow(d)
 y <- xFromCol(d)
 z <- as.matrix(d)
@@ -44,10 +44,35 @@ library(ggplot2)
 #> The following object is masked from 'package:raster':
 #> 
 #>     calc
-ggplot(gd, aes(x, y, group = g, fill  = upper)) + geom_polygon()
+system.time({
+print(ggplot(gd, aes(x, y, group = g, fill  = upper)) + geom_polygon())
+})
 ```
 
 ![](README-unnamed-chunk-2-1.png)
+
+    #>    user  system elapsed 
+    #>  10.269   0.324  10.597
+
+    ## timing is okayish  
+    system.time({
+    library(grid)
+    grid.newpage()
+    cols <- viridis::viridis(length(levels))[scales::rescale(unlist(lapply(split(gd$lower, gd$g), "[", 1)), to = c(1, length(levels)))]
+    plot(range(gd$x), range(gd$y))
+    vp <- gridBase::baseViewports()
+    grid::pushViewport(vp$inner, vp$figure, vp$plot)
+    grid::grid.polygon(gd$x, gd$y,
+                       gd$g,
+                       gp = grid::gpar(fill = cols, col = NA),
+                       default.units = "native")
+    grid::popViewport()
+    })
+
+![](README-unnamed-chunk-2-2.png)
+
+    #>    user  system elapsed 
+    #>   8.841   0.063   8.908
 
 This seems to work, but the nesting is v hard to get right.
 

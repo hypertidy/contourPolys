@@ -35,7 +35,7 @@ coordinates and plot for a nice effect.
 # levels <- pretty(range(volcano))
 
 library(raadtools)
-d <- aggregate(readtopo("etopo2", xylim = extent(120, 150, -45, -30))[[1]], fact = 4)
+d <- readtopo("etopo2", xylim = extent(120, 150, -45, -30))[[1]]
 x <- yFromRow(d)
 y <- xFromCol(d)
 z <- as.matrix(d)
@@ -52,8 +52,24 @@ gd[c("x", "y")] <- proj4::ptransform(as.matrix(gd[c("y", "x")]) * pi/180,
                                      "+init=epsg:4326", 
                                      "+proj=lcc +lon_0=147 +lat_0=-42 +lat_1=-30 +lat_2=-60")
 library(ggplot2)
-ggplot(gd, aes(x, y, group = g, fill  = upper)) + geom_polygon()
+system.time({
+print(ggplot(gd, aes(x, y, group = g, fill  = upper)) + geom_polygon())
+})
 
+## timing is okayish  
+system.time({
+library(grid)
+grid.newpage()
+cols <- viridis::viridis(length(levels))[scales::rescale(unlist(lapply(split(gd$lower, gd$g), "[", 1)), to = c(1, length(levels)))]
+plot(range(gd$x), range(gd$y))
+vp <- gridBase::baseViewports()
+grid::pushViewport(vp$inner, vp$figure, vp$plot)
+grid::grid.polygon(gd$x, gd$y,
+                   gd$g,
+                   gp = grid::gpar(fill = cols, col = NA),
+                   default.units = "native")
+grid::popViewport()
+})
 
 ```
 
