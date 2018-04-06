@@ -21,7 +21,44 @@ The goal of contourPolys is to create polygons via contourLines.
 
 ## Example
 
-This seems to work
+
+By hacking `filled.contour` we can get all the fragments out, reproject their
+coordinates and plot for a nice effect. 
+
+```{r}
+# z <- volcano
+# 
+# x <- 10*1:nrow(z)
+# y <- 10*1:ncol(z)
+# d <- raster(list(x = x, y = y, z = z))
+# 
+# levels <- pretty(range(volcano))
+
+library(raadtools)
+d <- aggregate(readtopo("etopo2", xylim = extent(120, 150, -45, -30))[[1]], fact = 4)
+x <- yFromRow(d)
+y <- xFromCol(d)
+z <- as.matrix(d)
+levels <- pretty(range(z), n = 7)
+p <- contourPolys::fcontour(x, y, z, levels)
+m <- cbind(x = unlist(p[[1]]), 
+           y = unlist(p[[2]]), 
+           lower = rep(unlist(p[[3]]), lengths(p[[1]])), 
+           upper = rep(unlist(p[[4]]), lengths(p[[1]])), 
+           g = rep(seq_along(p[[1]]), lengths(p[[1]]))) 
+
+gd <- as.data.frame(m)
+gd[c("x", "y")] <- proj4::ptransform(as.matrix(gd[c("y", "x")]) * pi/180, 
+                                     "+init=epsg:4326", 
+                                     "+proj=lcc +lon_0=147 +lat_0=-42 +lat_1=-30 +lat_2=-60")
+library(ggplot2)
+ggplot(gd, aes(x, y, group = g, fill  = upper)) + geom_polygon()
+
+
+```
+
+
+This seems to work, but the nesting is v hard to get right. 
 
 ```{r}
 library(raster)

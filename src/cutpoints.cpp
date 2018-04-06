@@ -136,7 +136,9 @@ List fcontour(NumericVector x, NumericVector y, NumericMatrix z, NumericVector c
   int ncount = 0; 
   NumericVector rx(8); 
   CollectorList outX; 
-  CollectorList outY; 
+  CollectorList outY;
+  CollectorList outL;
+  CollectorList outU; 
   
   for (i = 1; i < nx; i++) {
     for (j = 1; j < ny; j++) {
@@ -154,17 +156,20 @@ List fcontour(NumericVector x, NumericVector y, NumericMatrix z, NumericVector c
         if (npt > 2) {
           outX.push_back(CreateNvector(npt, px)); 
           outY.push_back(CreateNvector(npt, py)); 
+          outL.push_back(IntegerVector::create(c[k-1]));
+          outU.push_back(IntegerVector::create(c[k])); 
         }
 
       }
     }}
   
-  Rcpp::List out(3);
+  Rcpp::List out(4);
   // Rcpp::CharacterVector names(3);
 // pass out the raw npts-length polygons 
 // these need to be capture per nc above, but for now just bundled together
   out[0] =outX.vector();
   out[1] =outY.vector();
-
+  out[2] = outL.vector();
+  out[3] = outU.vector();
   return out; 
 }
