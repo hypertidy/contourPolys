@@ -18,12 +18,64 @@ knitr::opts_chunk$set(
 
 The goal of contourPolys is to create polygons via contourLines. 
 
+Currently this is just me experimenting with the problem and keeping notes. 
 
 ## Example
 
 
-By hacking `filled.contour` we can get all the fragments out, reproject their
-coordinates and plot for a nice effect. 
+By hacking `filled.contour` we can get all the fragments out, and plot properly with ggplot2. 
+
+
+The *very* primitive `fcontour` function will provide the equivalent of the
+data set produced and plotted by filled.contour. 
+
+First, try to use `stat_contour`, it doesn't work because `contourLines` is
+not producing closed regions. 
+
+```{r}
+## from https://twitter.com/BrodieGaslam/status/988601419270971392
+library(reshape2)
+v <- volcano
+vdat <- melt(v)
+names(vdat) <- c("x", "y", "z")
+library(ggplot2)
+ggplot(vdat, aes(x, y, z = z)) + 
+  stat_contour(geom = "polygon",  aes(fill = ..level..))
+
+
+cl <- contourLines(volcano)
+image(volcano, col = NA); lapply(cl, polygon)
+```
+
+One way to fix that is to *seal* the contour lines at the edges of the grid, but it's not easy to do. 
+
+A cheat's way, is to use a version of `filled.contour` and save all the fragments explicitly, and then plot as a set of tiny polygons. 
+
+```{r}
+z <- as.matrix(volcano)
+y <- seq_len(ncol(z))
+x <- seq_len(nrow(z))
+
+levels <- pretty(range(z), n = 7)
+p <- contourPolys::fcontour(x, y, z, levels)
+m <- cbind(x = unlist(p[[1]]), 
+           y = unlist(p[[2]]), 
+           lower = rep(unlist(p[[3]]), lengths(p[[1]])), 
+           upper = rep(unlist(p[[4]]), lengths(p[[1]])), 
+           g = rep(seq_along(p[[1]]), lengths(p[[1]]))) 
+
+gd <- as.data.frame(m)
+
+library(ggplot2)
+system.time({
+print(ggplot(gd, aes(x, y, group = g, fill  = upper)) + geom_polygon())
+})
+
+```
+
+Further, with all the fragments the coordinates can be reprojected in a way
+that various R image plotters cannot do. 
+
 
 ```{r}
 # z <- volcano
