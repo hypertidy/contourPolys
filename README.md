@@ -14,7 +14,7 @@ By hacking `filled.contour` we can get all the fragments out, and plot properly 
 
 The *very* primitive `fcontour` function will provide the equivalent of the data set produced and plotted by filled.contour.
 
-First, try to use `stat_contour`, it doesn't work because `contourLines` is not producing closed regions.
+First, try to use `stat_contour`, it doesn't work because `contourLines` is not producing closed regions, and worse the polygon drawing is not respecting holes that are filled by other smaller polygons.
 
 ``` r
 ## from https://twitter.com/BrodieGaslam/status/988601419270971392
@@ -38,7 +38,7 @@ image(volcano, col = NA); purrr::walk(cl, polygon)
 
 ![](README-unnamed-chunk-2-2.png)
 
-One way to fix that is to *seal* the contour lines at the edges of the grid, but it's not easy to do.
+One way to fix that is to *seal* the contour lines at the edges of the grid, but it's not easy to do. (The contouring is awesome in R, but the coordinates don't exactly go to the edges, which is the part I couldn't see an easy fix for).
 
 A cheat's way, is to use a version of `filled.contour` and save all the fragments explicitly, and then plot as a set of tiny polygons.
 
@@ -66,9 +66,11 @@ print(ggplot(gd, aes(x, y, group = g, fill  = upper)) + geom_polygon())
 ![](README-unnamed-chunk-3-1.png)
 
     #>    user  system elapsed 
-    #>   1.260   0.008   1.268
+    #>   1.322   0.036   1.358
 
-Further, with all the fragments the coordinates can be reprojected in a way that various R image plotters cannot do.
+Gggplot2 does plot many tiny polygons reasonably efficiently, because `grid::grid.polygon` is vectorized for aesthetics and for holes - but at some point it just won't scale for very many pixels. Ultimately we will want the regions as bounded areas.
+
+But, this way has other advantages because with all the fragments the coordinates can be reprojected in a way that various R image plotters cannot do. (R needs some intermediate between array structures and polygons, so that shared vertices stayed shared (indexed) until needed, and expansion is progressively done while plotting/building areas, or we drop internal edges cleverly and trace around remaining boundaries. )
 
 ``` r
 # z <- volcano
@@ -107,7 +109,7 @@ print(ggplot(gd, aes(x, y, group = g, fill  = upper)) + geom_polygon())
 ![](README-unnamed-chunk-4-1.png)
 
     #>    user  system elapsed 
-    #>  10.049   0.276  10.326
+    #>  10.320   0.536  10.856
 
     ## timing is okayish  
     system.time({
@@ -127,7 +129,7 @@ print(ggplot(gd, aes(x, y, group = g, fill  = upper)) + geom_polygon())
 ![](README-unnamed-chunk-4-2.png)
 
     #>    user  system elapsed 
-    #>   8.446   0.012   8.457
+    #>   8.643   0.028   8.671
 
 Other attempts
 --------------
