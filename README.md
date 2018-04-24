@@ -66,9 +66,50 @@ print(ggplot(gd, aes(x, y, group = g, fill  = upper)) + geom_polygon())
 ![](README-unnamed-chunk-3-1.png)
 
     #>    user  system elapsed 
-    #>   1.322   0.036   1.358
+    #>   1.295   0.008   1.303
 
 Gggplot2 does plot many tiny polygons reasonably efficiently, because `grid::grid.polygon` is vectorized for aesthetics and for holes - but at some point it just won't scale for very many pixels. Ultimately we will want the regions as bounded areas.
+
+We can coalesce these into efficient sf polygons, this is not done in an efficient way but there are improvements that could be made.
+
+-   return a different organization of the fragments
+-   possibly, convert to edge-form, and simply remove any internal edges, then trace the remnants around in polygons (but that still needs to re-nest holes which is a hassle)
+-   build per level in C, rather than return all the fragments to R as a set, so the tighter the levels the smaller the overall footprint at any time
+-   some better marching squares proper thing ...
+
+(This does work, try it at home ...)
+
+``` r
+z <- as.matrix(volcano)
+y <- seq_len(ncol(z))
+x <- seq_len(nrow(z))
+
+levels <- pretty(range(z), n =10)
+p <- contourPolys::fcontour(x, y, z, levels)
+m <- cbind(x = unlist(p[[1]]), 
+           y = unlist(p[[2]]), 
+           lower = rep(unlist(p[[3]]), lengths(p[[1]])), 
+           upper = rep(unlist(p[[4]]), lengths(p[[1]])), 
+           g = rep(seq_along(p[[1]]), lengths(p[[1]]))) 
+
+r1 <- function(x) {
+                   nr <- length(x)/2; 
+structure(list(matrix(x, ncol = 2)[c(seq_len(nr), 1), ]), 
+                             class = c("XY", "POLYGON", "sfg"))
+}
+library(sf)
+xx <- lapply(split(m[, 1:2], rep(m[, 5], 2)), r1)
+## drop bad ones
+uu <- unlist(lapply(xx, st_is_valid))
+
+x <- lapply(split(xx[uu], m[!duplicated(m[,5]), 3][uu]), 
+            sf::st_geometrycollection)
+
+
+x <- st_sfc(x)
+y <- st_sf(geometry = x, a = seq_along(x))
+plot(st_union(y, by_feature = TRUE))
+```
 
 But, this way has other advantages because with all the fragments the coordinates can be reprojected in a way that various R image plotters cannot do. (R needs some intermediate between array structures and polygons, so that shared vertices stayed shared (indexed) until needed, and expansion is progressively done while plotting/building areas, or we drop internal edges cleverly and trace around remaining boundaries. )
 
@@ -109,7 +150,7 @@ print(ggplot(gd, aes(x, y, group = g, fill  = upper)) + geom_polygon())
 ![](README-unnamed-chunk-4-1.png)
 
     #>    user  system elapsed 
-    #>  10.320   0.536  10.856
+    #>  10.184   0.328  10.513
 
     ## timing is okayish  
     system.time({
@@ -129,7 +170,7 @@ print(ggplot(gd, aes(x, y, group = g, fill  = upper)) + geom_polygon())
 ![](README-unnamed-chunk-4-2.png)
 
     #>    user  system elapsed 
-    #>   8.643   0.028   8.671
+    #>   8.783   0.024   8.808
 
 Other attempts
 --------------
