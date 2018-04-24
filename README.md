@@ -5,10 +5,70 @@ contourPolys
 
 The goal of contourPolys is to create polygons via contourLines.
 
+Currently this is just me experimenting with the problem and keeping notes.
+
 Example
 -------
 
-By hacking `filled.contour` we can get all the fragments out, reproject their coordinates and plot for a nice effect.
+By hacking `filled.contour` we can get all the fragments out, and plot properly with ggplot2.
+
+The *very* primitive `fcontour` function will provide the equivalent of the data set produced and plotted by filled.contour.
+
+First, try to use `stat_contour`, it doesn't work because `contourLines` is not producing closed regions.
+
+``` r
+## from https://twitter.com/BrodieGaslam/status/988601419270971392
+library(reshape2)
+v <- volcano
+vdat <- melt(v)
+names(vdat) <- c("x", "y", "z")
+library(ggplot2)
+ggplot(vdat, aes(x, y, z = z)) + 
+  stat_contour(geom = "polygon",  aes(fill = ..level..))
+```
+
+![](README-unnamed-chunk-2-1.png)
+
+``` r
+
+
+cl <- contourLines(volcano)
+image(volcano, col = NA); purrr::walk(cl, polygon)
+```
+
+![](README-unnamed-chunk-2-2.png)
+
+One way to fix that is to *seal* the contour lines at the edges of the grid, but it's not easy to do.
+
+A cheat's way, is to use a version of `filled.contour` and save all the fragments explicitly, and then plot as a set of tiny polygons.
+
+``` r
+z <- as.matrix(volcano)
+y <- seq_len(ncol(z))
+x <- seq_len(nrow(z))
+
+levels <- pretty(range(z), n = 7)
+p <- contourPolys::fcontour(x, y, z, levels)
+m <- cbind(x = unlist(p[[1]]), 
+           y = unlist(p[[2]]), 
+           lower = rep(unlist(p[[3]]), lengths(p[[1]])), 
+           upper = rep(unlist(p[[4]]), lengths(p[[1]])), 
+           g = rep(seq_along(p[[1]]), lengths(p[[1]]))) 
+
+gd <- as.data.frame(m)
+
+library(ggplot2)
+system.time({
+print(ggplot(gd, aes(x, y, group = g, fill  = upper)) + geom_polygon())
+})
+```
+
+![](README-unnamed-chunk-3-1.png)
+
+    #>    user  system elapsed 
+    #>   1.260   0.008   1.268
+
+Further, with all the fragments the coordinates can be reprojected in a way that various R image plotters cannot do.
 
 ``` r
 # z <- volcano
@@ -39,20 +99,15 @@ gd[c("x", "y")] <- proj4::ptransform(as.matrix(gd[c("y", "x")]) * pi/180,
                                      "+init=epsg:4326", 
                                      "+proj=lcc +lon_0=147 +lat_0=-42 +lat_1=-30 +lat_2=-60")
 library(ggplot2)
-#> 
-#> Attaching package: 'ggplot2'
-#> The following object is masked from 'package:raster':
-#> 
-#>     calc
 system.time({
 print(ggplot(gd, aes(x, y, group = g, fill  = upper)) + geom_polygon())
 })
 ```
 
-![](README-unnamed-chunk-2-1.png)
+![](README-unnamed-chunk-4-1.png)
 
     #>    user  system elapsed 
-    #>  10.269   0.324  10.597
+    #>  10.049   0.276  10.326
 
     ## timing is okayish  
     system.time({
@@ -69,10 +124,13 @@ print(ggplot(gd, aes(x, y, group = g, fill  = upper)) + geom_polygon())
     grid::popViewport()
     })
 
-![](README-unnamed-chunk-2-2.png)
+![](README-unnamed-chunk-4-2.png)
 
     #>    user  system elapsed 
-    #>   8.841   0.063   8.908
+    #>   8.446   0.012   8.457
+
+Other attempts
+--------------
 
 This seems to work, but the nesting is v hard to get right.
 
@@ -81,9 +139,6 @@ library(raster)
 library(dplyr)
 #> 
 #> Attaching package: 'dplyr'
-#> The following object is masked from 'package:ggplot2':
-#> 
-#>     vars
 #> The following objects are masked from 'package:raster':
 #> 
 #>     intersect, select, union
@@ -142,7 +197,7 @@ st_overlaps(a)
 plot(a, col = viridis::viridis(length(a)))
 ```
 
-![](README-unnamed-chunk-3-1.png)
+![](README-unnamed-chunk-5-1.png)
 
 ``` r
 

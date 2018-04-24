@@ -44,7 +44,7 @@ ggplot(vdat, aes(x, y, z = z)) +
 
 
 cl <- contourLines(volcano)
-image(volcano, col = NA); lapply(cl, polygon)
+image(volcano, col = NA); purrr::walk(cl, polygon)
 ```
 
 One way to fix that is to *seal* the contour lines at the edges of the grid, but it's not easy to do. 
@@ -124,6 +124,9 @@ grid::popViewport()
 })
 
 ```
+
+
+## Other attempts
 
 
 This seems to work, but the nesting is v hard to get right. 
