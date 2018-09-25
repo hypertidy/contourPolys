@@ -190,8 +190,9 @@ We need
 * group_by region, segment and remove any segments that occur twice
 * join all remaining segments, and coerce to polygon
 
-Almost works ... sorta, the unique segs per region thing is not working now ...
+Almost works, removing repeated segments certainly works - but still we have to re-nest the rings which is hard. 
 
+Ultimately I think straight-through with lists of sanitized fragments into the indexed cascaded union will be fastest. 
 
 ```{r}
 library(dplyr)
@@ -249,7 +250,7 @@ segs$.vertex0 <- vertex0
 segs$.vertex1 <- vertex1
 
 usegs <- segs %>% mutate(segid = paste(.vertex0, .vertex1, sep = "-")) %>% 
-  group_by(region, segid) %>% mutate(n = n()) %>% filter(n < 3) %>% ungroup()
+  group_by(region, segid) %>% mutate(n = n()) %>% filter(n < 2) %>% ungroup()
 
 tab <- usegs %>% inner_join(udata$.vx, c(".vertex0" = ".vx")) %>% rename(x0= x, y0 = y) %>% inner_join(udata$.vx, c(".vertex1" = ".vx"))
 ggplot(tab , aes(x = x0, y = y0, xend = x, yend = y, col = region)) + geom_segment() + guides(colour = FALSE)

@@ -74,7 +74,7 @@ print(ggplot(gd, aes(x, y, group = g, fill  = upper)) + geom_polygon())
 ![](README-unnamed-chunk-3-1.png)<!-- -->
 
     #>    user  system elapsed 
-    #>   0.330   0.024   0.354
+    #>   0.343   0.028   0.372
 
 Gggplot2 does plot many tiny polygons reasonably efficiently, because
 `grid::grid.polygon` is vectorized for aesthetics and for holes - but at
@@ -151,7 +151,7 @@ library(raadtools)
 #> Loading required package: sp
 #> global option 'raadfiles.data.roots' set:
 #> '/rdsi/PUBLIC/raad/data'
-#> Uploading raad file cache as at 2018-09-25 10:58:36 (461293 files listed)
+#> Uploading raad file cache as at 2018-09-25 13:24:13 (461293 files listed)
 d <- readtopo("etopo2", xylim = extent(120, 150, -45, -30))[[1]]
 x <- yFromRow(d)
 y <- xFromCol(d)
@@ -177,7 +177,7 @@ print(ggplot(gd, aes(x, y, group = g, fill  = upper)) + geom_polygon())
 ![](README-unnamed-chunk-5-1.png)<!-- -->
 
     #>    user  system elapsed 
-    #>   9.691   0.388  10.079
+    #>   9.745   0.252   9.997
     
     ## timing is okayish  
     system.time({
@@ -197,7 +197,7 @@ print(ggplot(gd, aes(x, y, group = g, fill  = upper)) + geom_polygon())
 ![](README-unnamed-chunk-5-2.png)<!-- -->
 
     #>    user  system elapsed 
-    #>   7.878   0.136   8.015
+    #>   7.909   0.080   7.989
 
 ## Other attempts
 
@@ -210,8 +210,11 @@ We need
   - group\_by region, segment and remove any segments that occur twice
   - join all remaining segments, and coerce to polygon
 
-Almost works … sorta, the unique segs per region thing is not working
-now …
+Almost works, removing repeated segments certainly works - but still we
+have to re-nest the rings which is hard.
+
+Ultimately I think straight-through with lists of sanitized fragments
+into the indexed cascaded union will be fastest.
 
 ``` r
 library(dplyr)
@@ -280,7 +283,7 @@ segs$.vertex0 <- vertex0
 segs$.vertex1 <- vertex1
 
 usegs <- segs %>% mutate(segid = paste(.vertex0, .vertex1, sep = "-")) %>% 
-  group_by(region, segid) %>% mutate(n = n()) %>% filter(n < 3) %>% ungroup()
+  group_by(region, segid) %>% mutate(n = n()) %>% filter(n < 2) %>% ungroup()
 
 tab <- usegs %>% inner_join(udata$.vx, c(".vertex0" = ".vx")) %>% rename(x0= x, y0 = y) %>% inner_join(udata$.vx, c(".vertex1" = ".vx"))
 ggplot(tab , aes(x = x0, y = y0, xend = x, yend = y, col = region)) + geom_segment() + guides(colour = FALSE)
