@@ -7,7 +7,21 @@
 #' @param y vector x coordinate
 #' @param z vector z matrix
 #' @export
+#' @examples
+#' z <- as.matrix(volcano)
+NULL
+
+#' Filled contour
+#'
+#' @param x vector x coordinate
+#' @param y vector x coordinate
+#' @param z vector z matrix
+#' @export
 fcontour <- function(x, y, z, c) {
     .Call(`_contourPolys_fcontour`, x, y, z, c)
+}
+
+fcontour_sf <- function(x, y, z, c) {
+    .Call(`_contourPolys_fcontour_sf`, x, y, z, c)
 }
 
