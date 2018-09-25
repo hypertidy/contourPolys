@@ -1,20 +1,24 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
-contourPolys
-============
+
+# contourPolys
 
 The goal of contourPolys is to create polygons via contourLines.
 
-Currently this is just me experimenting with the problem and keeping notes.
+Currently this is just me experimenting with the problem and keeping
+notes.
 
-Example
--------
+## Example
 
-By hacking `filled.contour` we can get all the fragments out, and plot properly with ggplot2.
+By hacking `filled.contour` we can get all the fragments out, and plot
+properly with ggplot2.
 
-The *very* primitive `fcontour` function will provide the equivalent of the data set produced and plotted by filled.contour.
+The *very* primitive `fcontour` function will provide the equivalent of
+the data set produced and plotted by filled.contour.
 
-First, try to use `stat_contour`, it doesn't work because `contourLines` is not producing closed regions, and worse the polygon drawing is not respecting holes that are filled by other smaller polygons.
+First, try to use `stat_contour`, it doesn’t work because `contourLines`
+is not producing closed regions, and worse the polygon drawing is not
+respecting holes that are filled by other smaller polygons.
 
 ``` r
 ## from https://twitter.com/BrodieGaslam/status/988601419270971392
@@ -27,7 +31,7 @@ ggplot(vdat, aes(x, y, z = z)) +
   stat_contour(geom = "polygon",  aes(fill = ..level..))
 ```
 
-![](README-unnamed-chunk-2-1.png)
+![](README-unnamed-chunk-2-1.png)<!-- -->
 
 ``` r
 
@@ -36,11 +40,15 @@ cl <- contourLines(volcano)
 image(volcano, col = NA); purrr::walk(cl, polygon)
 ```
 
-![](README-unnamed-chunk-2-2.png)
+![](README-unnamed-chunk-2-2.png)<!-- -->
 
-One way to fix that is to *seal* the contour lines at the edges of the grid, but it's not easy to do. (The contouring is awesome in R, but the coordinates don't exactly go to the edges, which is the part I couldn't see an easy fix for).
+One way to fix that is to *seal* the contour lines at the edges of the
+grid, but it’s not easy to do. (The contouring is awesome in R, but the
+coordinates don’t exactly go to the edges, which is the part I couldn’t
+see an easy fix for).
 
-A cheat's way, is to use a version of `filled.contour` and save all the fragments explicitly, and then plot as a set of tiny polygons.
+A cheat’s way, is to use a version of `filled.contour` and save all the
+fragments explicitly, and then plot as a set of tiny polygons.
 
 ``` r
 z <- as.matrix(volcano)
@@ -63,21 +71,29 @@ print(ggplot(gd, aes(x, y, group = g, fill  = upper)) + geom_polygon())
 })
 ```
 
-![](README-unnamed-chunk-3-1.png)
+![](README-unnamed-chunk-3-1.png)<!-- -->
 
     #>    user  system elapsed 
-    #>   1.295   0.008   1.303
+    #>   0.330   0.024   0.354
 
-Gggplot2 does plot many tiny polygons reasonably efficiently, because `grid::grid.polygon` is vectorized for aesthetics and for holes - but at some point it just won't scale for very many pixels. Ultimately we will want the regions as bounded areas.
+Gggplot2 does plot many tiny polygons reasonably efficiently, because
+`grid::grid.polygon` is vectorized for aesthetics and for holes - but at
+some point it just won’t scale for very many pixels. Ultimately we will
+want the regions as bounded areas.
 
-We can coalesce these into efficient sf polygons, this is not done in an efficient way but there are improvements that could be made.
+We can coalesce these into efficient sf polygons, this is not done in an
+efficient way but there are improvements that could be made.
 
--   return a different organization of the fragments
--   possibly, convert to edge-form, and simply remove any internal edges, then trace the remnants around in polygons (but that still needs to re-nest holes which is a hassle)
--   build per level in C, rather than return all the fragments to R as a set, so the tighter the levels the smaller the overall footprint at any time
--   some better marching squares proper thing ...
+  - return a different organization of the fragments
+  - possibly, convert to edge-form, and simply remove any internal
+    edges, then trace the remnants around in polygons (but that still
+    needs to re-nest holes which is a hassle)
+  - build per level in C, rather than return all the fragments to R as a
+    set, so the tighter the levels the smaller the overall footprint at
+    any time
+  - some better marching squares proper thing …
 
-(This does work, try it at home ...)
+(This does work, try it at home …)
 
 ``` r
 z <- as.matrix(volcano)
@@ -98,6 +114,7 @@ structure(list(matrix(x, ncol = 2)[c(seq_len(nr), 1), ]),
                              class = c("XY", "POLYGON", "sfg"))
 }
 library(sf)
+#> Linking to GEOS 3.6.2, GDAL 2.2.3, PROJ 4.9.3
 xx <- lapply(split(m[, 1:2], rep(m[, 5], 2)), r1)
 ## drop bad ones
 uu <- unlist(lapply(xx, st_is_valid))
@@ -111,7 +128,14 @@ y <- st_sf(geometry = x, a = seq_along(x))
 plot(st_union(y, by_feature = TRUE))
 ```
 
-But, this way has other advantages because with all the fragments the coordinates can be reprojected in a way that various R image plotters cannot do. (R needs some intermediate between array structures and polygons, so that shared vertices stayed shared (indexed) until needed, and expansion is progressively done while plotting/building areas, or we drop internal edges cleverly and trace around remaining boundaries. )
+![](README-unnamed-chunk-4-1.png)<!-- -->
+
+But, this way has other advantages because with all the fragments the
+coordinates can be reprojected in a way that various R image plotters
+cannot do. (R needs some intermediate between array structures and
+polygons, so that shared vertices stayed shared (indexed) until needed,
+and expansion is progressively done while plotting/building areas, or we
+drop internal edges cleverly and trace around remaining boundaries. )
 
 ``` r
 # z <- volcano
@@ -125,6 +149,9 @@ But, this way has other advantages because with all the fragments the coordinate
 library(raadtools)
 #> Loading required package: raster
 #> Loading required package: sp
+#> global option 'raadfiles.data.roots' set:
+#> '/rdsi/PUBLIC/raad/data'
+#> Uploading raad file cache as at 2018-09-25 10:58:36 (461293 files listed)
 d <- readtopo("etopo2", xylim = extent(120, 150, -45, -30))[[1]]
 x <- yFromRow(d)
 y <- xFromCol(d)
@@ -147,11 +174,11 @@ print(ggplot(gd, aes(x, y, group = g, fill  = upper)) + geom_polygon())
 })
 ```
 
-![](README-unnamed-chunk-4-1.png)
+![](README-unnamed-chunk-5-1.png)<!-- -->
 
     #>    user  system elapsed 
-    #>  10.184   0.328  10.513
-
+    #>   9.691   0.388  10.079
+    
     ## timing is okayish  
     system.time({
     library(grid)
@@ -167,18 +194,26 @@ print(ggplot(gd, aes(x, y, group = g, fill  = upper)) + geom_polygon())
     grid::popViewport()
     })
 
-![](README-unnamed-chunk-4-2.png)
+![](README-unnamed-chunk-5-2.png)<!-- -->
 
     #>    user  system elapsed 
-    #>   8.783   0.024   8.808
+    #>   7.878   0.136   8.015
 
-Other attempts
---------------
+## Other attempts
 
-This seems to work, but the nesting is v hard to get right.
+Can we coalesce by detecting boundaries?
+
+We need
+
+  - find unique coordinates, and map UID to instances
+  - find unique segments within region, segments identical despite order
+  - group\_by region, segment and remove any segments that occur twice
+  - join all remaining segments, and coerce to polygon
+
+Almost works … sorta, the unique segs per region thing is not working
+now …
 
 ``` r
-library(raster)
 library(dplyr)
 #> 
 #> Attaching package: 'dplyr'
@@ -191,6 +226,107 @@ library(dplyr)
 #> The following objects are masked from 'package:base':
 #> 
 #>     intersect, setdiff, setequal, union
+z <- as.matrix(volcano)
+y <- seq_len(ncol(z))
+x <- seq_len(nrow(z))
+
+asub <- TRUE
+if (asub) {
+xsub <- seq(1, length(x), length = 17)
+ysub <- seq(1, length(y), length = 16)
+z <- z[xsub, ysub]
+y <- y[ysub]
+x <- x[xsub]
+}
+levels <- pretty(range(z), n = if(asub) 4 else 7)
+p <- contourPolys::fcontour(x, y, z, levels)
+m <- cbind(x = unlist(p[[1]]), 
+           y = unlist(p[[2]]), 
+           lower = rep(unlist(p[[3]]), lengths(p[[1]])), 
+           upper = rep(unlist(p[[4]]), lengths(p[[1]])), 
+           g = rep(seq_along(p[[1]]), lengths(p[[1]]))) 
+
+gd <- tibble::as_tibble(m)
+
+gd <- gd %>% group_by(g) %>% slice(c(1:n(), 1)) %>% ungroup()
+
+ 
+# * find unique coordinates, and map UID to instances 
+# * find unique segments within region, segments identical despite order
+# * group_by region, segment and remove any segments that occur twice
+# * join all remaining segments, and coerce to polygon
+
+## clean up obvious degenerates
+# udata <- gd %>%  
+#   transmute(x, y, path = g, region = paste(lower, upper, sep = "-")) %>% 
+#   unjoin::unjoin(x, y, key_col = ".vx")
+# gd <- udata$data %>% group_by(path)  %>% distinct(.vx) %>% mutate(n = n()) %>% filter(n > 2) %>% 
+#   ungroup() %>% 
+#   select(path) %>% 
+#   distinct() %>% 
+#   inner_join(gd, c("path" = "g")) %>% 
+#   mutate(path = as.integer(factor(path)))
+
+udata <-   gd %>% transmute(x, y, path = g, region = paste(lower, upper, sep = "-")) %>% 
+  unjoin::unjoin(x, y, key_col = ".vx")
+
+segs <- purrr::map_df(split(udata$data$.vx, udata$data$path)[unique(udata$data$path)], silicate:::path_to_segment, .id = "path") 
+segs$region <- udata$data$region[match(as.integer(segs$path), udata$data$path)]
+
+## re-order segments to be sorted
+vertex0 <- pmin(segs$.vertex0, segs$.vertex1)
+vertex1 <- pmax(segs$.vertex0, segs$.vertex1)
+segs$.vertex0 <- vertex0
+segs$.vertex1 <- vertex1
+
+usegs <- segs %>% mutate(segid = paste(.vertex0, .vertex1, sep = "-")) %>% 
+  group_by(region, segid) %>% mutate(n = n()) %>% filter(n < 3) %>% ungroup()
+
+tab <- usegs %>% inner_join(udata$.vx, c(".vertex0" = ".vx")) %>% rename(x0= x, y0 = y) %>% inner_join(udata$.vx, c(".vertex1" = ".vx"))
+ggplot(tab , aes(x = x0, y = y0, xend = x, yend = y, col = region)) + geom_segment() + guides(colour = FALSE)
+```
+
+![](README-unnamed-chunk-6-1.png)<!-- -->
+
+``` r
+
+ucoords <- as.matrix(udata$.vx[c("x", "y")])
+a <- purrr::map_df(split(usegs, usegs$region), 
+           function(region) {
+             #tibble::tibble(geometry = sf::st_sfc(sf::st_multilinestring( purrr::map(purrr::transpose(region[c(".vertex0", ".vertex1")]), ~ucoords[unlist(.x), ]))))
+             
+             tibble::tibble(geometry = sf::st_sfc(sf::st_multilinestring( purrr::map(purrr::transpose(region[c(".vertex0", ".vertex1")]), 
+                                ~as.matrix(tibble(.vx = unlist(.x)) %>% inner_join(udata$.vx, ".vx") %>% select(x, y))))))
+           }, .id = "region")
+#> Warning in bind_rows_(x, .id): Vectorizing 'sfc_MULTILINESTRING' elements
+#> may not preserve their attributes
+
+#> Warning in bind_rows_(x, .id): Vectorizing 'sfc_MULTILINESTRING' elements
+#> may not preserve their attributes
+
+#> Warning in bind_rows_(x, .id): Vectorizing 'sfc_MULTILINESTRING' elements
+#> may not preserve their attributes
+
+#> Warning in bind_rows_(x, .id): Vectorizing 'sfc_MULTILINESTRING' elements
+#> may not preserve their attributes
+
+#> Warning in bind_rows_(x, .id): Vectorizing 'sfc_MULTILINESTRING' elements
+#> may not preserve their attributes
+
+#> Warning in bind_rows_(x, .id): Vectorizing 'sfc_MULTILINESTRING' elements
+#> may not preserve their attributes
+
+
+plot(sf::st_as_sf(a))
+```
+
+![](README-unnamed-chunk-6-2.png)<!-- -->
+
+This seems to work, but the nesting is v hard to get right.
+
+``` r
+library(raster)
+library(dplyr)
 p2seg <- function(x) cbind(head(seq_len(nrow(x)), -1), 
                            tail(seq_len(nrow(x)), -1))
 sf_explode <- function(x) {
@@ -226,7 +362,6 @@ x <- sf_explode(sf::st_as_sf(cl))
 
 
 library(sf)
-#> Linking to GEOS 3.6.2, GDAL 2.2.4, proj.4 4.9.3
 p <- st_polygonize(st_union(x))
 a <- st_cast(p)
 st_overlaps(a)
@@ -240,7 +375,7 @@ st_overlaps(a)
 plot(a, col = viridis::viridis(length(a)))
 ```
 
-![](README-unnamed-chunk-5-1.png)
+![](README-unnamed-chunk-7-1.png)<!-- -->
 
 ``` r
 

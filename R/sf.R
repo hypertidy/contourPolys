@@ -15,11 +15,24 @@ fc_interval_sf <- function(m) {
 }
 
 
+#' Title
+#'
+#' @param x 
+#' @param levels 
+#' @param ... 
+#' @param maxpixels 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 sfill_contour <- function(x, levels = NULL, ..., maxpixels = 2e16) {
   UseMethod("sfill_contour")
 }
+#' @export
+#' @name sfill_contour
 sfill_contour.BasicRaster <- function(x, levels = NULL, ..., maxpixels = 2^15) {
-  if (ncell(x) > maxpixels) {
+  if (raster::ncell(x) > maxpixels) {
     warning("setting maxpixels", immediate. = TRUE)
     x <- raster::sampleRegular(x, size = maxpixels, asRaster = TRUE)
   }
@@ -27,8 +40,8 @@ sfill_contour.BasicRaster <- function(x, levels = NULL, ..., maxpixels = 2^15) {
                                           raster::cellStats(x, max)))
   
   z <- t(raster::as.matrix(x)[nrow(x):1, ])
-  y <- rev(yFromRow(x))
-  x <- xFromCol(x)
+  y <- rev(raster::yFromRow(x, row = seq_len(dim(r)[1L])))
+  x <- raster::xFromCol(x)
   sfgs <- vector("list", length(levels) - 1)
   for (ilevel in seq_along(sfgs)) {
     p <- fcontour(x, y, z, levels[c(ilevel, ilevel + 1L)])
@@ -43,5 +56,5 @@ sfill_contour.BasicRaster <- function(x, levels = NULL, ..., maxpixels = 2^15) {
     print(sprintf("level %i of %i", ilevel, length(sfgs)))
   }
   sfc_vec <- sf::st_set_crs(sf::st_cast(do.call(c, sfgs)), raster::projection(x))
-  sf::st_sf(geometry = sfc_vec, min = head(levels, -1L), max = tail(levels, -1L))
+  sf::st_sf(geometry = sfc_vec, min = head(levels, -1L), max = utils::tail(levels, -1L))
 }
