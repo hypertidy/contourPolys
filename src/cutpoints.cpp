@@ -213,7 +213,7 @@ double calculate_N1_area(int n, double *xvec, double *yvec) {
 //'   data("topo", package = "contourPolys")
 //'   levels <- c(-6000, -4000, -2000, 0, 2000, 4000)
 //'   fc <- fcontour_sf(xFromCol(topo), rev(yFromRow(topo)), t(as.matrix(flip(topo, "y"))), c = levels)
-//'   g <- purrr::map(fc[[1]], ~sf::st_polygon(list(.x)))
+//' ## DONE  g <- purrr::map(fc[[1]], ~sf::st_polygon(list(.x)))
 //'   ik <- unlist(fc[[2]])
 //'   library(dplyr)
 //'   x <- st_sf(geometry = st_sfc(g), kk = ik) %>% group_by(kk) %>% summarize() %>% st_cast("MULTIPOLYGON")
@@ -238,9 +238,14 @@ List fcontour_sf(NumericVector x, NumericVector y, NumericMatrix z, NumericVecto
 //  CollectorList outU; 
 CollectorList outA;
 CollectorList out_area; 
+CharacterVector s3class(3); 
+s3class[0] = "XY"; 
+s3class[1] ="POLYGON"; 
+s3class[2] = "sfg"; 
+for (k = 1; k < nc ; k++) {
   for (i = 1; i < nx; i++) {
     for (j = 1; j < ny; j++) {
-      for (k = 1; k < nc ; k++) {
+
         FindPolygonVertices(c[k - 1], c[k],
                             x[i - 1], x[i],
                                        y[j - 1], y[j],
@@ -261,8 +266,10 @@ CollectorList out_area;
           // Rprintf("area: %f\n", area);
          } else {
         
-          NumericMatrix mat =  Rcpp::cbind(CreateN1vector(npt, px), CreateN1vector(npt, py)); 
-          outA.push_back(mat);
+          NumericMatrix mat =  Rcpp::cbind(CreateN1vector(npt, px), CreateN1vector(npt, py));
+           List lmat = List::create(mat); 
+          lmat.attr("class") = s3class;
+          outA.push_back(lmat);
           NumericVector ik(1); 
           ik[0] = k;
           outI.push_back(ik); 
