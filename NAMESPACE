@@ -2,6 +2,7 @@
 
 S3method(sfill_contour,BasicRaster)
 export(fcontour)
+export(fcontour_sf)
 export(sfill_contour)
 importFrom(Rcpp,sourceCpp)
 useDynLib('contourPolys', .registration = TRUE)
