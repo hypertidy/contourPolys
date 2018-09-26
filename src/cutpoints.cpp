@@ -3,6 +3,14 @@
 #include <stdlib.h>     /* abs */
 using namespace Rcpp;
 
+
+// function logic here taken from R source: https://svn.r-project.org/R/branches/R-3-5-branch/src/library/graphics/src/plot3d.c
+// FindCutPoints, FindPolygonVertices, and C_filledcontour from R graphics package originally authored by R. Ihaka
+//
+// R Core Team (2018). R: A language and environment for statistical
+// computing. R Foundation for Statistical Computing, Vienna, Austria.
+// URL https://www.R-project.org/.
+  
 void FindCutPoints(double low, double high,
                    double x1, double y1, double z1,
                    double x2, double y2, double z2,

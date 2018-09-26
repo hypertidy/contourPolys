@@ -11,5 +11,10 @@ What the package does (one paragraph).
 \author{
 \strong{Maintainer}: Michael Sumner \email{mdsumner@gmail.com}
 
+Authors:
+\itemize{
+  \item R Core Team (copyright plot3d.c code in graphics package, reproduced here)
+}
+
 }
 \keyword{internal}

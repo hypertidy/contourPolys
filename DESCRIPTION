@@ -1,7 +1,8 @@
 Package: contourPolys
 Title: What the Package Does (one line, title case)
 Version: 0.0.0.9000
-Authors@R: person("Michael", "Sumner", email = "mdsumner@gmail.com", role = c("aut", "cre"))
+Authors@R: c(person("Michael", "Sumner", email = "mdsumner@gmail.com", role = c("aut", "cre")), 
+             person("R Core", "Team", role = "aut",  comment = "copyright plot3d.c code in graphics package, reproduced here" ))
 Description: What the package does (one paragraph).
 Depends: R (>= 3.4.2)
 License: GPL-3
