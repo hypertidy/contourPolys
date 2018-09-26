@@ -1,5 +1,6 @@
 #include <Rcpp.h>
 #include "CollectorList.h"
+#include <stdlib.h>     /* abs */
 using namespace Rcpp;
 
 void FindCutPoints(double low, double high,
@@ -182,6 +183,25 @@ NumericVector CreateN1vector(int n, double *vec) {
   aa[n] = aa[0]; 
   return aa; 
 }
+// calculate area from raw cut points, n is the length of xvec and yvec and neither are closed
+// so we link the last to the first
+// area is positive/negative or zero
+double calculate_N1_area(int n, double *xvec, double *yvec) {
+  double xsum = 0.0;
+  double ysum = 0.0;
+  for (int ii = 0; ii < (n-1); ii++) {
+    xsum = xsum + xvec[ii] * yvec[ii+1];
+  }
+  for (int ii = 0; ii < (n-1); ii++) {
+    ysum = ysum + yvec[ii] * xvec[ii+1];
+  }
+  // final sum to close the ring
+  xsum = xsum + xvec[n-1] * yvec[0];
+  ysum = ysum + yvec[n-1] * xvec[0];
+  
+  
+  return (xsum - ysum)/2.0;
+}
 //' Filled contour
 //'
 //' @param x vector x coordinate
@@ -190,16 +210,16 @@ NumericVector CreateN1vector(int n, double *vec) {
 //' @export
 //' @examples
 //' z <- as.matrix(volcano)
-//  y <- seq_len(ncol(z))
-//  x <- seq_len(nrow(z))
-//  levels <- pretty(range(z), n =7)
-//  fc <- fcontour_sf(x, y, z, c = levels)
-//  g <- purrr::map(fc[[1]], ~sf::st_polygon(list(.x)))
-//  ik <- unlist(fc[[2]])
-//  ## here we need to trim, ignore any 0-area polygons in C++
-//  bad <- !unlist(lapply(g, st_is_valid))
-//  library(dplyr)
-//  x <- st_sf(geometry = st_sfc(g[!bad]), kk = ik[!bad]) %>% group_by(kk) %>% summarize() %>% st_cast("MULTIPOLYGON")
+//'  y <- seq_len(ncol(z))
+//'  x <- seq_len(nrow(z))
+//'  levels <- pretty(range(z), n =7)
+//'  fc <- fcontour_sf(x, y, z, c = levels)
+//'  g <- purrr::map(fc[[1]], ~sf::st_polygon(list(.x)))
+//'  ik <- unlist(fc[[2]])
+//'  ## here we need to trim, ignore any 0-area polygons in C++
+//'  bad <- !unlist(lapply(g, st_is_valid))
+//'  library(dplyr)
+//'  x <- st_sf(geometry = st_sfc(g[!bad]), kk = ik[!bad]) %>% group_by(kk) %>% summarize() %>% st_cast("MULTIPOLYGON")
 // [[Rcpp::export]]
 List fcontour_sf(NumericVector x, NumericVector y, NumericMatrix z, NumericVector c) {
   int i, j, k, npt;
@@ -216,6 +236,7 @@ List fcontour_sf(NumericVector x, NumericVector y, NumericMatrix z, NumericVecto
 //  CollectorList outL;
 //  CollectorList outU; 
 CollectorList outA;
+CollectorList out_area; 
   for (i = 1; i < nx; i++) {
     for (j = 1; j < ny; j++) {
       for (k = 1; k < nc ; k++) {
@@ -230,25 +251,36 @@ CollectorList outA;
         
         
         if (npt > 2) {
-          //1.  calculate area and ignore any that are 0
+          //DONE 1.  calculate area and ignore any that are 0  
           //2. build sfc down here, one for each k (so put k in outer)
           //3. call union directly from here?  (or send out a decent GC with no invalid geoms?)
-         NumericMatrix mat =  Rcpp::cbind(CreateN1vector(npt, px), CreateN1vector(npt, py)); 
-         outA.push_back(mat);
-         NumericVector ik(1); 
-         ik[0] = k;
-         outI.push_back(ik); 
+         double area = calculate_N1_area(npt, px, py); 
+         if (!(abs(area) > 0))  {
+           
+          // Rprintf("area: %f\n", area);
+         } else {
+        
+          NumericMatrix mat =  Rcpp::cbind(CreateN1vector(npt, px), CreateN1vector(npt, py)); 
+          outA.push_back(mat);
+          NumericVector ik(1); 
+          ik[0] = k;
+          outI.push_back(ik); 
+          NumericVector ak(1); 
+          ak[0] = area; 
+          out_area.push_back(ak); 
+         }
         }
         
       }
     }}
   
-  Rcpp::List out(2);
+  Rcpp::List out(3);
   // Rcpp::CharacterVector names(3);
   // pass out the raw npts-length polygons 
   // these need to be capture per nc above, but for now just bundled together
    out[0] =outA.vector();
   out[1] =outI.vector();
+  out[2] = out_area.vector();
 //  out[2] = outL.vector();
 //  out[3] = outU.vector();
   return out; 

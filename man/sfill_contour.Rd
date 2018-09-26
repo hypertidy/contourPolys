@@ -2,13 +2,13 @@
 % Please edit documentation in R/sf.R
 \name{sfill_contour}
 \alias{sfill_contour}
-\alias{sfill_contour}
 \alias{sfill_contour.BasicRaster}
 \title{Title}
 \usage{
 sfill_contour(x, levels = NULL, ..., maxpixels = 2e+16)
 
-\method{sfill_contour}{BasicRaster}(x, levels = NULL, ..., maxpixels = 2^15)
+\method{sfill_contour}{BasicRaster}(x, levels = NULL, ...,
+  maxpixels = 2^15)
 }
 \arguments{
 \item{x}{}

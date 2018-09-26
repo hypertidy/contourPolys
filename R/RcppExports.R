@@ -7,9 +7,9 @@
 #' @param y vector x coordinate
 #' @param z vector z matrix
 #' @export
-#' @examples
-#' z <- as.matrix(volcano)
-NULL
+fcontour <- function(x, y, z, c) {
+    .Call(`_contourPolys_fcontour`, x, y, z, c)
+}
 
 #' Filled contour
 #'
@@ -17,10 +17,18 @@ NULL
 #' @param y vector x coordinate
 #' @param z vector z matrix
 #' @export
-fcontour <- function(x, y, z, c) {
-    .Call(`_contourPolys_fcontour`, x, y, z, c)
-}
-
+#' @examples
+#' z <- as.matrix(volcano)
+#'  y <- seq_len(ncol(z))
+#'  x <- seq_len(nrow(z))
+#'  levels <- pretty(range(z), n =7)
+#'  fc <- fcontour_sf(x, y, z, c = levels)
+#'  g <- purrr::map(fc[[1]], ~sf::st_polygon(list(.x)))
+#'  ik <- unlist(fc[[2]])
+#'  ## here we need to trim, ignore any 0-area polygons in C++
+#'  bad <- !unlist(lapply(g, st_is_valid))
+#'  library(dplyr)
+#'  x <- st_sf(geometry = st_sfc(g[!bad]), kk = ik[!bad]) %>% group_by(kk) %>% summarize() %>% st_cast("MULTIPOLYGON")
 fcontour_sf <- function(x, y, z, c) {
     .Call(`_contourPolys_fcontour_sf`, x, y, z, c)
 }
