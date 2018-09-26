@@ -160,14 +160,14 @@ List fcontour(NumericVector x, NumericVector y, NumericMatrix z, NumericVector c
           outL.push_back(IntegerVector::create(c[k-1]));
           outU.push_back(IntegerVector::create(c[k])); 
         }
-
+        
       }
     }}
   
   Rcpp::List out(4);
   // Rcpp::CharacterVector names(3);
-// pass out the raw npts-length polygons 
-// these need to be capture per nc above, but for now just bundled together
+  // pass out the raw npts-length polygons 
+  // these need to be capture per nc above, but for now just bundled together
   out[0] =outX.vector();
   out[1] =outY.vector();
   out[2] = outL.vector();
@@ -233,19 +233,19 @@ List fcontour_sf(NumericVector x, NumericVector y, NumericMatrix z, NumericVecto
   int ncount = 0; 
   NumericVector rx(8); 
   CollectorList outI; 
-//  CollectorList outY;
-//  CollectorList outL;
-//  CollectorList outU; 
-CollectorList outA;
-CollectorList out_area; 
-CharacterVector s3class(3); 
-s3class[0] = "XY"; 
-s3class[1] ="POLYGON"; 
-s3class[2] = "sfg"; 
-for (k = 1; k < nc ; k++) {
-  for (i = 1; i < nx; i++) {
-    for (j = 1; j < ny; j++) {
-
+  //  CollectorList outY;
+  //  CollectorList outL;
+  //  CollectorList outU; 
+  CollectorList outA;
+  CollectorList out_area; 
+  CharacterVector s3class(3); 
+  s3class[0] = "XY"; 
+  s3class[1] ="POLYGON"; 
+  s3class[2] = "sfg"; 
+  for (k = 1; k < nc ; k++) {
+    for (i = 1; i < nx; i++) {
+      for (j = 1; j < ny; j++) {
+        
         FindPolygonVertices(c[k - 1], c[k],
                             x[i - 1], x[i],
                                        y[j - 1], y[j],
@@ -260,23 +260,24 @@ for (k = 1; k < nc ; k++) {
           //DONE 1.  calculate area and ignore any that are 0  
           //2. build sfc down here, one for each k (so put k in outer)
           //3. call union directly from here?  (or send out a decent GC with no invalid geoms?)
-         double area = calculate_N1_area(npt, px, py); 
-         if (!(abs(area) > 0))  {
-           
-          // Rprintf("area: %f\n", area);
-         } else {
-        
-          NumericMatrix mat =  Rcpp::cbind(CreateN1vector(npt, px), CreateN1vector(npt, py));
-           List lmat = List::create(mat); 
-          lmat.attr("class") = s3class;
-          outA.push_back(lmat);
-          NumericVector ik(1); 
-          ik[0] = k;
-          outI.push_back(ik); 
-          NumericVector ak(1); 
-          ak[0] = area; 
-          out_area.push_back(ak); 
-         }
+          double area = calculate_N1_area(npt, px, py); 
+          if (!(abs(area) > 0))  {
+            
+            // Rprintf("area: %f\n", area);
+          } else {
+            
+            NumericMatrix mat =  Rcpp::cbind(CreateN1vector(npt, px), CreateN1vector(npt, py));
+            List lmat = List::create(mat); 
+            lmat.attr("class") = s3class;
+            
+            outA.push_back(lmat);
+            NumericVector ik(1); 
+            ik[0] = k;
+            outI.push_back(ik); 
+            NumericVector ak(1); 
+            ak[0] = area; 
+            out_area.push_back(ak); 
+          }
         }
         
       }
@@ -286,10 +287,10 @@ for (k = 1; k < nc ; k++) {
   // Rcpp::CharacterVector names(3);
   // pass out the raw npts-length polygons 
   // these need to be capture per nc above, but for now just bundled together
-   out[0] =outA.vector();
+  out[0] =outA.vector();
   out[1] =outI.vector();
   out[2] = out_area.vector();
-//  out[2] = outL.vector();
-//  out[3] = outU.vector();
+  //  out[2] = outL.vector();
+  //  out[3] = outU.vector();
   return out; 
 }

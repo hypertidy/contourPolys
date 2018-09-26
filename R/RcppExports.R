@@ -22,10 +22,10 @@ fcontour <- function(x, y, z, c) {
 #'   data("topo", package = "contourPolys")
 #'   levels <- c(-6000, -4000, -2000, 0, 2000, 4000)
 #'   fc <- fcontour_sf(xFromCol(topo), rev(yFromRow(topo)), t(as.matrix(flip(topo, "y"))), c = levels)
-#'   g <- purrr::map(fc[[1]], ~sf::st_polygon(list(.x)))
+#' ## DONE  g <- purrr::map(fc[[1]], ~sf::st_polygon(list(.x)))
 #'   ik <- unlist(fc[[2]])
 #'   library(dplyr)
-#'   x <- st_sf(geometry = st_sfc(g), kk = ik) %>% group_by(kk) %>% summarize() %>% st_cast("MULTIPOLYGON")
+#'   x <- st_sf(geometry = st_sfc(fc[[1]]), kk = ik) %>% group_by(kk) %>% summarize() %>% st_cast("MULTIPOLYGON")
 #'   ramp2 <- grDevices::colorRampPalette(c("#54A3D1", "#60B3EB", 
 #'                                          "#78C8F0", "#98D1F5", "#B5DCFF", "#BDE1F0", "#CDEBFA", 
 #'                                          "#D6EFFF", "#EBFAFF", "grey92", "grey94", "grey96", "white"))
