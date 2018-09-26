@@ -17,15 +17,16 @@ fcontour_sf(x, y, z, c)
 Filled contour
 }
 \examples{
-z <- as.matrix(volcano)
- y <- seq_len(ncol(z))
- x <- seq_len(nrow(z))
- levels <- pretty(range(z), n =7)
- fc <- fcontour_sf(x, y, z, c = levels)
- g <- purrr::map(fc[[1]], ~sf::st_polygon(list(.x)))
- ik <- unlist(fc[[2]])
- ## here we need to trim, ignore any 0-area polygons in C++
- bad <- !unlist(lapply(g, st_is_valid))
- library(dplyr)
- x <- st_sf(geometry = st_sfc(g[!bad]), kk = ik[!bad]) \%>\% group_by(kk) \%>\% summarize() \%>\% st_cast("MULTIPOLYGON")
+library(raster)
+  data("topo", package = "contourPolys")
+  levels <- c(-6000, -4000, -2000, 0, 2000, 4000)
+  fc <- fcontour_sf(xFromCol(topo), rev(yFromRow(topo)), t(as.matrix(flip(topo, "y"))), c = levels)
+  g <- purrr::map(fc[[1]], ~sf::st_polygon(list(.x)))
+  ik <- unlist(fc[[2]])
+  library(dplyr)
+  x <- st_sf(geometry = st_sfc(g), kk = ik) \%>\% group_by(kk) \%>\% summarize() \%>\% st_cast("MULTIPOLYGON")
+  ramp2 <- grDevices::colorRampPalette(c("#54A3D1", "#60B3EB", 
+                                         "#78C8F0", "#98D1F5", "#B5DCFF", "#BDE1F0", "#CDEBFA", 
+                                         "#D6EFFF", "#EBFAFF", "grey92", "grey94", "grey96", "white"))
+    plot(x, col = ramp2(nrow(x)))
 }
