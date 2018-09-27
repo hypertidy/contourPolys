@@ -74,7 +74,7 @@ print(ggplot(gd, aes(x, y, group = g, fill  = upper)) + geom_polygon())
 ![](README-unnamed-chunk-3-1.png)<!-- -->
 
     #>    user  system elapsed 
-    #>   0.343   0.028   0.372
+    #>   0.320   0.100   0.421
 
 Gggplot2 does plot many tiny polygons reasonably efficiently, because
 `grid::grid.polygon` is vectorized for aesthetics and for holes - but at
@@ -151,7 +151,7 @@ library(raadtools)
 #> Loading required package: sp
 #> global option 'raadfiles.data.roots' set:
 #> '/rdsi/PUBLIC/raad/data'
-#> Uploading raad file cache as at 2018-09-25 13:24:13 (461293 files listed)
+#> Uploading raad file cache as at 2018-09-27 02:28:26 (462318 files listed)
 d <- readtopo("etopo2", xylim = extent(120, 150, -45, -30))[[1]]
 x <- yFromRow(d)
 y <- xFromCol(d)
@@ -177,7 +177,7 @@ print(ggplot(gd, aes(x, y, group = g, fill  = upper)) + geom_polygon())
 ![](README-unnamed-chunk-5-1.png)<!-- -->
 
     #>    user  system elapsed 
-    #>   9.745   0.252   9.997
+    #>   9.376   0.700  10.076
     
     ## timing is okayish  
     system.time({
@@ -197,9 +197,9 @@ print(ggplot(gd, aes(x, y, group = g, fill  = upper)) + geom_polygon())
 ![](README-unnamed-chunk-5-2.png)<!-- -->
 
     #>    user  system elapsed 
-    #>   7.909   0.080   7.989
+    #>   8.196   0.220   8.416
 
-## Other attempts
+## Constructing proper polygons
 
 Can we coalesce by detecting boundaries?
 
@@ -207,14 +207,12 @@ We need
 
   - find unique coordinates, and map UID to instances
   - find unique segments within region, segments identical despite order
-  - group\_by region, segment and remove any segments that occur twice
+  - group\_by region, segment and remove any segments that occur *an
+    even number of times per region*
   - join all remaining segments, and coerce to polygon
 
 Almost works, removing repeated segments certainly works - but still we
 have to re-nest the rings which is hard.
-
-Ultimately I think straight-through with lists of sanitized fragments
-into the indexed cascaded union will be fastest.
 
 ``` r
 library(dplyr)
@@ -229,19 +227,16 @@ library(dplyr)
 #> The following objects are masked from 'package:base':
 #> 
 #>     intersect, setdiff, setequal, union
+# 1. choose a region
+# 2. find all rings (remove even-repeated segments)
+# 3. calculate all fragment centroids
+# 4. do pip for all centroids in all region rings
+# 5. apply even-odd rule
+
 z <- as.matrix(volcano)
 y <- seq_len(ncol(z))
 x <- seq_len(nrow(z))
-
-asub <- TRUE
-if (asub) {
-xsub <- seq(1, length(x), length = 17)
-ysub <- seq(1, length(y), length = 16)
-z <- z[xsub, ysub]
-y <- y[ysub]
-x <- x[xsub]
-}
-levels <- pretty(range(z), n = if(asub) 4 else 7)
+levels <- pretty(range(z), n = 7)
 p <- contourPolys::fcontour(x, y, z, levels)
 m <- cbind(x = unlist(p[[1]]), 
            y = unlist(p[[2]]), 
@@ -249,29 +244,13 @@ m <- cbind(x = unlist(p[[1]]),
            upper = rep(unlist(p[[4]]), lengths(p[[1]])), 
            g = rep(seq_along(p[[1]]), lengths(p[[1]]))) 
 
-gd <- tibble::as_tibble(m)
 
-gd <- gd %>% group_by(g) %>% slice(c(1:n(), 1)) %>% ungroup()
+gd <- tibble::as_tibble(m) %>% 
+  group_by(g) %>% slice(c(1:n(), 1)) %>% ungroup() %>% ## close rings
+  transmute(x, y, region = sprintf("%03i-%03i", lower, upper), path = g)
 
- 
-# * find unique coordinates, and map UID to instances 
-# * find unique segments within region, segments identical despite order
-# * group_by region, segment and remove any segments that occur twice
-# * join all remaining segments, and coerce to polygon
 
-## clean up obvious degenerates
-# udata <- gd %>%  
-#   transmute(x, y, path = g, region = paste(lower, upper, sep = "-")) %>% 
-#   unjoin::unjoin(x, y, key_col = ".vx")
-# gd <- udata$data %>% group_by(path)  %>% distinct(.vx) %>% mutate(n = n()) %>% filter(n > 2) %>% 
-#   ungroup() %>% 
-#   select(path) %>% 
-#   distinct() %>% 
-#   inner_join(gd, c("path" = "g")) %>% 
-#   mutate(path = as.integer(factor(path)))
-
-udata <-   gd %>% transmute(x, y, path = g, region = paste(lower, upper, sep = "-")) %>% 
-  unjoin::unjoin(x, y, key_col = ".vx")
+udata <-   gd %>%   unjoin::unjoin(x, y, key_col = ".vx")
 
 segs <- purrr::map_df(split(udata$data$.vx, udata$data$path)[unique(udata$data$path)], silicate:::path_to_segment, .id = "path") 
 segs$region <- udata$data$region[match(as.integer(segs$path), udata$data$path)]
@@ -283,47 +262,39 @@ segs$.vertex0 <- vertex0
 segs$.vertex1 <- vertex1
 
 usegs <- segs %>% mutate(segid = paste(.vertex0, .vertex1, sep = "-")) %>% 
-  group_by(region, segid) %>% mutate(n = n()) %>% filter(n < 2) %>% ungroup()
-
-tab <- usegs %>% inner_join(udata$.vx, c(".vertex0" = ".vx")) %>% rename(x0= x, y0 = y) %>% inner_join(udata$.vx, c(".vertex1" = ".vx"))
-ggplot(tab , aes(x = x0, y = y0, xend = x, yend = y, col = region)) + geom_segment() + guides(colour = FALSE)
+  group_by(region, segid) %>% 
+  filter(n() %% 2 == 1) %>% 
+  ungroup() %>% 
+   group_by(region, segid) %>% 
+   slice(1) %>% 
+     mutate(nsegs = n()) %>% 
+   ungroup()
 ```
 
-![](README-unnamed-chunk-6-1.png)<!-- -->
+Now that we have unique segments per region, we can see the rings and
+what we need.
+
+There are two options to re-nest:
+
+1.  identify every fragment in the ring/s, and classify rings by the
+    even odd rule
+2.  process the rings relative to each other to determine nesting (as in
+    `rgl::triangulate`)
+
+<!-- end list -->
 
 ``` r
-
-ucoords <- as.matrix(udata$.vx[c("x", "y")])
-a <- purrr::map_df(split(usegs, usegs$region), 
-           function(region) {
-             #tibble::tibble(geometry = sf::st_sfc(sf::st_multilinestring( purrr::map(purrr::transpose(region[c(".vertex0", ".vertex1")]), ~ucoords[unlist(.x), ]))))
-             
-             tibble::tibble(geometry = sf::st_sfc(sf::st_multilinestring( purrr::map(purrr::transpose(region[c(".vertex0", ".vertex1")]), 
-                                ~as.matrix(tibble(.vx = unlist(.x)) %>% inner_join(udata$.vx, ".vx") %>% select(x, y))))))
-           }, .id = "region")
-#> Warning in bind_rows_(x, .id): Vectorizing 'sfc_MULTILINESTRING' elements
-#> may not preserve their attributes
-
-#> Warning in bind_rows_(x, .id): Vectorizing 'sfc_MULTILINESTRING' elements
-#> may not preserve their attributes
-
-#> Warning in bind_rows_(x, .id): Vectorizing 'sfc_MULTILINESTRING' elements
-#> may not preserve their attributes
-
-#> Warning in bind_rows_(x, .id): Vectorizing 'sfc_MULTILINESTRING' elements
-#> may not preserve their attributes
-
-#> Warning in bind_rows_(x, .id): Vectorizing 'sfc_MULTILINESTRING' elements
-#> may not preserve their attributes
-
-#> Warning in bind_rows_(x, .id): Vectorizing 'sfc_MULTILINESTRING' elements
-#> may not preserve their attributes
-
-
-plot(sf::st_as_sf(a))
+tab <- usegs %>% 
+  inner_join(udata$.vx, c(".vertex0" = ".vx")) %>% 
+  rename(x0= x, y0 = y) %>% 
+  inner_join(udata$.vx, c(".vertex1" = ".vx"))
+library(ggplot2)
+ggplot(tab , aes(x = x0, y = y0, xend = x, yend = y, col = nsegs)) + geom_segment() + facet_wrap(~region)
 ```
 
-![](README-unnamed-chunk-6-2.png)<!-- -->
+![](README-unnamed-chunk-7-1.png)<!-- -->
+
+## Old attempt
 
 This seems to work, but the nesting is v hard to get right.
 
@@ -378,7 +349,7 @@ st_overlaps(a)
 plot(a, col = viridis::viridis(length(a)))
 ```
 
-![](README-unnamed-chunk-7-1.png)<!-- -->
+![](README-unnamed-chunk-8-1.png)<!-- -->
 
 ``` r
 
