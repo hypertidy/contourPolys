@@ -260,6 +260,9 @@ tab <- usegs %>%
 library(ggplot2)
 ggplot(tab , aes(x = x0, y = y0, xend = x, yend = y, col = nsegs)) + geom_segment() + facet_wrap(~region)
 
+library(ggplot2)
+ggplot(tab , aes(x = x0, y = y0, xend = x, yend = y, col = region)) + geom_point() 
+
 
 
 ```

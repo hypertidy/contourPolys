@@ -74,7 +74,7 @@ print(ggplot(gd, aes(x, y, group = g, fill  = upper)) + geom_polygon())
 ![](README-unnamed-chunk-3-1.png)<!-- -->
 
     #>    user  system elapsed 
-    #>   0.320   0.100   0.421
+    #>   0.344   0.024   0.369
 
 Gggplot2 does plot many tiny polygons reasonably efficiently, because
 `grid::grid.polygon` is vectorized for aesthetics and for holes - but at
@@ -151,7 +151,7 @@ library(raadtools)
 #> Loading required package: sp
 #> global option 'raadfiles.data.roots' set:
 #> '/rdsi/PUBLIC/raad/data'
-#> Uploading raad file cache as at 2018-09-27 02:28:26 (462318 files listed)
+#> Uploading raad file cache as at 2018-09-27 02:56:48 (462318 files listed)
 d <- readtopo("etopo2", xylim = extent(120, 150, -45, -30))[[1]]
 x <- yFromRow(d)
 y <- xFromCol(d)
@@ -177,7 +177,7 @@ print(ggplot(gd, aes(x, y, group = g, fill  = upper)) + geom_polygon())
 ![](README-unnamed-chunk-5-1.png)<!-- -->
 
     #>    user  system elapsed 
-    #>   9.376   0.700  10.076
+    #>  10.259   0.712  10.971
     
     ## timing is okayish  
     system.time({
@@ -197,7 +197,7 @@ print(ggplot(gd, aes(x, y, group = g, fill  = upper)) + geom_polygon())
 ![](README-unnamed-chunk-5-2.png)<!-- -->
 
     #>    user  system elapsed 
-    #>   8.196   0.220   8.416
+    #>   8.385   0.160   8.546
 
 ## Constructing proper polygons
 
@@ -293,6 +293,14 @@ ggplot(tab , aes(x = x0, y = y0, xend = x, yend = y, col = nsegs)) + geom_segmen
 ```
 
 ![](README-unnamed-chunk-7-1.png)<!-- -->
+
+``` r
+
+library(ggplot2)
+ggplot(tab , aes(x = x0, y = y0, xend = x, yend = y, col = region)) + geom_point() 
+```
+
+![](README-unnamed-chunk-7-2.png)<!-- -->
 
 ## Old attempt
 
